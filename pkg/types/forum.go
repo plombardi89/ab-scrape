@@ -59,7 +59,29 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 				return false
 			}
 
-			_ = c.Visit(thread.URL)
+			postCollector := colly.NewCollector()
+			postCollector.OnRequest(func(r *colly.Request) {
+				log.Printf("INFO: visiting thread %s\n", r.URL)
+			})
+
+			postCollector.OnHTML("table[id*='post']", func(e *colly.HTMLElement) {
+				post, err := NewPostFromSelection(e.DOM)
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				post.ThreadID = thread.ID
+
+				err = writer.WritePost(post)
+				if err != nil {
+					log.Printf("ERROR: unable to write post: %v", err)
+					return
+				}
+
+				//log.Printf("INFO: wrote post %s\n", postPath)
+			})
+
+			_ = postCollector.Visit(thread.URL)
 			return true
 		})
 	})
