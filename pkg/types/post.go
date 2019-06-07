@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +49,14 @@ func NewPostFromSelection(s *goquery.Selection) (*Post, error) {
 	p.ID = postID
 	p.Content = postMessageSelection.Text()
 	p.Author = s.Find("a.bigusername").Text()
+
+	dateData := s.Find(fmt.Sprintf("#post%d > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1)", p.ID)).Text()
+	dateData = strings.TrimSpace(dateData)
+	postCreatedAt, err := time.Parse("1-2-2006, 03:04 PM", dateData)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	p.CreatedAt = postCreatedAt
 
 	return p, nil
 }
