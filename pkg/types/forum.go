@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
@@ -39,7 +40,7 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 		}
 
 		doc := goquery.NewDocumentFromNode(node)
-		f.extractLastPageNumber(doc)
+		f.LastPage = extractLastPageNumber(doc)
 
 		for i := 2; i <= f.LastPage; i++ {
 			_ = c.Visit(fmt.Sprintf("%sf=%d&order=desc&page=%d", f.ForumIndexURL, f.ID, i))
@@ -64,22 +65,48 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 				log.Printf("INFO: visiting thread %s\n", r.URL)
 			})
 
-			postCollector.OnHTML("table[id*='post']", func(e *colly.HTMLElement) {
-				post, err := NewPostFromSelection(e.DOM)
+			postCollector.OnResponse(func(response *colly.Response) {
+				doc, err := goquery.NewDocumentFromReader(bytes.NewReader(response.Body))
 				if err != nil {
 					log.Fatalln(err)
 				}
 
-				post.ThreadID = thread.ID
+				threadPages := extractLastPageNumber(doc)
+				doc.Find("table[id*='post']").Each(func(i int, selection *goquery.Selection) {
+					post, err := NewPostFromSelection(selection)
+					if err != nil {
+						log.Fatalln(err)
+					}
+					post.ThreadID = thread.ID
 
-				err = writer.WritePost(post)
-				if err != nil {
-					log.Printf("ERROR: unable to write post: %v", err)
-					return
+					err = writer.WritePost(post)
+					if err != nil {
+						log.Printf("ERROR: unable to write post: %v", err)
+						return
+					}
+				})
+
+				for i := 2; i <= threadPages; i++ {
+					_ = postCollector.Visit(fmt.Sprintf("%s/showthread.php?t=%d&page=%d", f.ForumIndexURL, thread.ID, i))
 				}
-
-				//log.Printf("INFO: wrote post %s\n", postPath)
 			})
+
+			//postCollector.OnHTML("table[id*='post']", func(e *colly.HTMLElement) {
+			//	post, err := NewPostFromSelection(e.DOM)
+			//	if err != nil {
+			//		log.Fatalln(err)
+			//	}
+			//
+			//	post.ThreadID = thread.ID
+			//
+			//	err = writer.WritePost(post)
+			//	if err != nil {
+			//		log.Printf("ERROR: unable to write post: %v", err)
+			//		return
+			//	}
+			//
+			//	//log.Printf("INFO: wrote post %s\n", postPath)
+			//})
 
 			_ = postCollector.Visit(thread.URL)
 			return true
@@ -108,8 +135,23 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 	_ = c.Visit(f.URL)
 }
 
-func (f *Forum) extractLastPageNumber(doc *goquery.Document) {
-	doc.Find("div.pagenav > table > tbody > tr > td.vbmenu_control").Each(func(i int, s *goquery.Selection) {
+//func (f *Forum) extractLastPageNumber(doc *goquery.Document) {
+//	doc.Find("div.pagenav > table > tbody > tr > td.vbmenu_control").Each(func(i int, s *goquery.Selection) {
+//		pageAOfB := strings.Trim(strings.Replace(strings.Replace(s.Text(), "Page", "", 1), "of", "", 1), " ")
+//		minMaxPages := strings.Fields(pageAOfB)
+//		lastPage, err := strconv.Atoi(minMaxPages[1])
+//		if err != nil {
+//			log.Fatalln(err)
+//		}
+//
+//		f.LastPage = lastPage
+//	})
+//}
+
+func extractLastPageNumber(doc *goquery.Document) int {
+	var result int
+
+	doc.Find("div.pagenav > table > tbody > tr > td.vbmenu_control").EachWithBreak(func(i int, s *goquery.Selection) bool {
 		pageAOfB := strings.Trim(strings.Replace(strings.Replace(s.Text(), "Page", "", 1), "of", "", 1), " ")
 		minMaxPages := strings.Fields(pageAOfB)
 		lastPage, err := strconv.Atoi(minMaxPages[1])
@@ -117,6 +159,9 @@ func (f *Forum) extractLastPageNumber(doc *goquery.Document) {
 			log.Fatalln(err)
 		}
 
-		f.LastPage = lastPage
+		result = lastPage
+		return false
 	})
+
+	return result
 }

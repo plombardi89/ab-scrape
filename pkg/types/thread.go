@@ -21,6 +21,9 @@ type Thread struct {
 
 	// Title is the name or Title of the Thread.
 	Title string
+
+	// Current number of pages
+	PageCount int
 }
 
 func ThreadFromSelection(f *Forum, s *goquery.Selection) (*Thread, error) {
