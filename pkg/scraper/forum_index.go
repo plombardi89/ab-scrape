@@ -1,4 +1,4 @@
-package types
+package scraper
 
 import (
 	"encoding/json"

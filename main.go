@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gocolly/colly"
-	"github.com/plombardi89/ab-scrape/pkg/types"
+	"github.com/plombardi89/ab-scrape/pkg/scraper"
 	"log"
 	"net/url"
 	"path/filepath"
@@ -21,7 +21,7 @@ func main() {
 	}
 
 	c := colly.NewCollector()
-	index := &types.ForumIndex{URL: forumURL.String()}
+	index := &scraper.ForumIndex{URL: forumURL.String()}
 	scrapeErrs := index.Scrape(c)
 	if len(scrapeErrs) > 0 {
 		for _, err := range scrapeErrs {
@@ -31,7 +31,7 @@ func main() {
 		log.Fatalln("Errors!")
 	}
 
-	writer := types.FileSystemWriter{
+	writer := scraper.FileSystemWriter{
 		StorageRoot: filepath.Join(outputRoot, forumURL.Host, time.Now().UTC().Format("20060102150405")),
 	}
 

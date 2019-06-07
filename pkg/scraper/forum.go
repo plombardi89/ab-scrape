@@ -1,4 +1,4 @@
-package types
+package scraper
 
 import (
 	"bytes"
@@ -91,42 +91,10 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 				}
 			})
 
-			//postCollector.OnHTML("table[id*='post']", func(e *colly.HTMLElement) {
-			//	post, err := NewPostFromSelection(e.DOM)
-			//	if err != nil {
-			//		log.Fatalln(err)
-			//	}
-			//
-			//	post.ThreadID = thread.ID
-			//
-			//	err = writer.WritePost(post)
-			//	if err != nil {
-			//		log.Printf("ERROR: unable to write post: %v", err)
-			//		return
-			//	}
-			//
-			//	//log.Printf("INFO: wrote post %s\n", postPath)
-			//})
-
 			_ = postCollector.Visit(thread.URL)
 			return true
 		})
 	})
-
-	//c.OnHTML("table[id*='post']", func(e *colly.HTMLElement) {
-	//	post, err := NewPostFromSelection(e.DOM)
-	//	if err != nil {
-	//		log.Fatalln(err)
-	//	}
-	//
-	//	err = writer.WritePost(post)
-	//	if err != nil {
-	//		log.Printf("ERROR: unable to write post: %v", err)
-	//		return
-	//	}
-	//
-	//	//log.Printf("INFO: wrote post %s\n", postPath)
-	//})
 
 	c.OnRequest(func(r *colly.Request) {
 		log.Printf("INFO: visiting %s\n", r.URL)
@@ -134,19 +102,6 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 
 	_ = c.Visit(f.URL)
 }
-
-//func (f *Forum) extractLastPageNumber(doc *goquery.Document) {
-//	doc.Find("div.pagenav > table > tbody > tr > td.vbmenu_control").Each(func(i int, s *goquery.Selection) {
-//		pageAOfB := strings.Trim(strings.Replace(strings.Replace(s.Text(), "Page", "", 1), "of", "", 1), " ")
-//		minMaxPages := strings.Fields(pageAOfB)
-//		lastPage, err := strconv.Atoi(minMaxPages[1])
-//		if err != nil {
-//			log.Fatalln(err)
-//		}
-//
-//		f.LastPage = lastPage
-//	})
-//}
 
 func extractLastPageNumber(doc *goquery.Document) int {
 	var result int
