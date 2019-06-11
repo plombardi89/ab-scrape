@@ -51,7 +51,18 @@ func NewPostFromSelection(s *goquery.Selection) (*Post, error) {
 	p.Author = s.Find("a.bigusername").Text()
 
 	dateData := s.Find(fmt.Sprintf("#post%d > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1)", p.ID)).Text()
+
+	// Posts are not always marked with absolute dates ... sometimes it's relative, for example, "Yesterday, 06:24 AM".
+	// In this case we need to convert that to something useful so we can process it later.
+	now := time.Now()
 	dateData = strings.TrimSpace(dateData)
+	if strings.HasPrefix(dateData, "Yesterday") {
+		yesterday := time.Now().Add(-(time.Hour * 24))
+		dateData = strings.Replace(dateData, "Yesterday", yesterday.Format("1-2-2006"), 1)
+	} else if strings.HasPrefix(dateData, "Today") {
+		dateData = strings.Replace(dateData, "Today", now.Format("1-2-2006"), 1)
+	}
+
 	postCreatedAt, err := time.Parse("1-2-2006, 03:04 PM", dateData)
 	if err != nil {
 		log.Fatalln(err)
@@ -69,26 +80,3 @@ func (p *Post) ToJSON() ([]byte, error) {
 
 	return bytes, nil
 }
-
-//type FilePostWriter struct {
-//	outputRoot string
-//}
-//
-//func (w* FilePostWriter) Write(p *Post) (string, error) {
-//	threadPath := fmt.Sprintf("%s/threads/%d", main.outputRoot, p.ThreadID)
-//	if err := os.MkdirAll(threadPath, 0755); err != nil {
-//		return "", err
-//	}
-//
-//	jsonBytes, marshallErr := json.MarshalIndent(p, "", "  ")
-//	if marshallErr != nil {
-//		return "", marshallErr
-//	}
-//
-//	postPath := fmt.Sprintf("%s/post-%d.json", threadPath, p.ID)
-//	if err := ioutil.WriteFile(postPath, jsonBytes, 0755); err != nil {
-//		return "", err
-//	}
-//
-//	return postPath, nil
-//}

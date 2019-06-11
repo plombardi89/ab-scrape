@@ -43,7 +43,7 @@ func (f *Forum) Scrape(c *colly.Collector, writer FileSystemWriter) {
 		f.LastPage = extractLastPageNumber(doc)
 
 		for i := 2; i <= f.LastPage; i++ {
-			_ = c.Visit(fmt.Sprintf("%sf=%d&order=desc&page=%d", f.ForumIndexURL, f.ID, i))
+			_ = c.Visit(fmt.Sprintf("%s/forumdisplay.php?f=%d&order=desc&page=%d", f.ForumIndexURL, f.ID, i))
 		}
 	})
 
